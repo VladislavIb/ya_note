@@ -36,8 +36,13 @@ class TestContent(TestCase):
             author=cls.user
         )
 
+    def setUp(self):
+        """Логин пользователя."""
+        self.client.login(username='testuser', password='testpass')
+
     def test_anonymous_user_cannot_see_submit_form(self):
         """Анонимный пользователь не видит форму отправки заметки."""
+        self.client.logout()
         response = self.client.get(
             reverse('notes:detail', args=[self.note1.slug])
         )
@@ -48,14 +53,12 @@ class TestContent(TestCase):
 
     def test_authenticated_user_can_see_submit_form_on_create(self):
         """Авторизованный пользователь видит форму создания заметки."""
-        self.client.login(username='testuser', password='testpass')
         response = self.client.get(reverse('notes:add'))
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertContains(response, '<form')
 
     def test_authenticated_user_can_see_submit_form_on_edit(self):
         """Авторизованный пользователь видит форму редактирования заметки."""
-        self.client.login(username='testuser', password='testpass')
         response = self.client.get(
             reverse('notes:edit', args=[self.note1.slug])
         )
@@ -64,7 +67,6 @@ class TestContent(TestCase):
 
     def test_notes_sorted_by_id(self):
         """Заметки на странице отсортированы по id (от старой к новой)."""
-        self.client.login(username='testuser', password='testpass')
         response = self.client.get(reverse('notes:list'))
         self.assertEqual(response.status_code, HTTPStatus.OK)
         notes = response.context['note_list']

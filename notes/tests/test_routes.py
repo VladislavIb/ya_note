@@ -1,5 +1,4 @@
 from http import HTTPStatus
-
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -11,6 +10,9 @@ User = get_user_model()
 
 class TestRoutes(TestCase):
     """Тесты для проверки маршрутов приложения notes."""
+
+    LOGIN_URL = '/auth/login/'
+    SUCCESS_URL = reverse('notes:success')
 
     @classmethod
     def setUpTestData(cls):
@@ -36,6 +38,10 @@ class TestRoutes(TestCase):
             author=cls.other_user
         )
 
+    def login_user(self, user):
+        """Логин пользователя."""
+        return self.client.login(username=user.username, password='testpass')
+
     def test_pages_accessibility(self):
         """Проверка доступности страниц для всех пользователей."""
         pages = [
@@ -51,9 +57,7 @@ class TestRoutes(TestCase):
         for name, args, expected_status, user in pages:
             with self.subTest(name=name):
                 if user:
-                    self.client.login(
-                        username=user.username, password='testpass'
-                    )
+                    self.login_user(user)
                 response = self.client.get(reverse(name, args=args))
                 self.assertEqual(response.status_code, expected_status)
 
@@ -63,12 +67,12 @@ class TestRoutes(TestCase):
             (
                 'notes:edit',
                 [self.note.slug],
-                f'/auth/login/?next=/edit/{self.note.slug}/'
+                f'{self.LOGIN_URL}?next=/edit/{self.note.slug}/'
             ),
             (
                 'notes:delete',
                 [self.note.slug],
-                f'/auth/login/?next=/delete/{self.note.slug}/'
+                f'{self.LOGIN_URL}?next=/delete/{self.note.slug}/'
             ),
         ]
 
@@ -92,20 +96,20 @@ class TestRoutes(TestCase):
                 self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_note_success_page_accessibility(self):
-        """Страница доступна авторизованному пользователю."""
-        self.client.login(username='testuser', password='testpass')
-        response = self.client.get(reverse('notes:success'))
+        """Страница успеха доступна авторизованному пользователю."""
+        self.login_user(self.user)
+        response = self.client.get(self.SUCCESS_URL)
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_redirect_after_login(self):
         """Проверка перенаправления пользователя после успешного входа."""
-        login_url = reverse('users:login') + f"?next=/edit/{self.note.slug}/"
+        login_url_with_next = f'{self.LOGIN_URL}?next=/edit/{self.note.slug}/'
         response = self.client.get(
             reverse('notes:edit', args=[self.note.slug])
         )
-        self.assertRedirects(response, login_url)
+        self.assertRedirects(response, login_url_with_next)
         response = self.client.post(
-            login_url,
+            login_url_with_next,
             data={'username': 'testuser', 'password': 'testpass'},
             follow=True
         )
@@ -124,7 +128,7 @@ class TestRoutes(TestCase):
 
     def test_notes_list_accessible_by_author(self):
         """Страница списка заметок доступна автору и отображает его заметки."""
-        self.client.login(username='testuser', password='testpass')
+        self.login_user(self.user)
         response = self.client.get(reverse('notes:list'))
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertContains(response, self.note.title)
