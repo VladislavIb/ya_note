@@ -49,6 +49,9 @@ class TestRoutes(TestCase):
             ('notes:detail', [self.note.slug], HTTPStatus.OK, self.user),
             ('notes:edit', [self.note.slug], HTTPStatus.OK, self.user),
             ('notes:delete', [self.note.slug], HTTPStatus.OK, self.user),
+            ('notes:add', None, HTTPStatus.OK, self.user),
+            ('notes:success', None, HTTPStatus.OK, self.user),
+            ('notes:list', None, HTTPStatus.OK, self.user),
             ('users:signup', None, HTTPStatus.OK, None),
             ('users:login', None, HTTPStatus.OK, None),
             ('users:logout', None, HTTPStatus.OK, self.user),
@@ -74,6 +77,9 @@ class TestRoutes(TestCase):
                 [self.note.slug],
                 f'{self.LOGIN_URL}?next=/delete/{self.note.slug}/'
             ),
+            ('notes:add', None, f'{self.LOGIN_URL}?next=/add/'),
+            ('notes:list', None, f'{self.LOGIN_URL}?next=/notes/'),
+            ('notes:success', None, f'{self.LOGIN_URL}?next=/done/'),
         ]
 
         for name, args, expected_redirect in redirects:
