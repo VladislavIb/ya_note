@@ -71,3 +71,28 @@ class TestContent(TestCase):
         self.assertEqual(response.status_code, HTTPStatus.OK)
         notes = response.context['note_list']
         self.assertGreater(notes[1].id, notes[0].id)
+
+    def test_notes_are_in_object_list(self):
+        """Заметки на странице присутствуют в списке заметок."""
+        response = self.client.get(reverse('notes:list'))
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        notes = response.context['note_list']
+        self.assertIn(self.note1, notes)
+        self.assertIn(self.note2, notes)
+
+    def test_notes_are_user_specific(self):
+        """Заметки на странице принадлежат конкретному пользователю."""
+        self.client.logout()
+        self.client.login(username='otheruser', password='otherpass')
+        other_user_note = Note.objects.create(
+            title='Заметка другого пользователя',
+            text='Текст заметки другого пользователя',
+            slug='other-user-note',
+            author=self.other_user
+        )
+        response = self.client.get(reverse('notes:list'))
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        notes = response.context['note_list']
+        self.assertNotIn(self.note1, notes)
+        self.assertNotIn(self.note2, notes)
+        self.assertIn(other_user_note, notes)
