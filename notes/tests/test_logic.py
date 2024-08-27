@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from pytils.translit import slugify
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -111,3 +112,27 @@ class TestLogic(TestCase):
             reverse('notes:delete', args=[self.other_note.slug])
         )
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+
+    def test_cannot_create_note_with_duplicate_slug(self):
+        """Невозможно создать две заметки с одинаковым slug."""
+        response = self.client.post(reverse('notes:add'), self.NEW_NOTE_DATA)
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+        response = self.client.post(reverse('notes:add'), self.NEW_NOTE_DATA)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertFormError(
+            response, 'form', 'slug',
+            'new-note - такой slug уже существует, '
+            'придумайте уникальное значение!'
+        )
+        self.assertEqual(Note.objects.filter(slug='new-note').count(), 1)
+
+    def test_slug_is_generated_if_not_provided(self):
+        """Если slug не передан, он будет сгенерирован автоматически."""
+        data = {
+            'title': 'Новая заметка без slug',
+            'text': 'Тест новой заметки',
+        }
+        expected_slug = slugify(data['title'])
+        response = self.client.post(reverse('notes:add'), data)
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+        self.assertTrue(Note.objects.filter(slug=expected_slug).exists())
